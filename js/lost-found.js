@@ -1,8 +1,8 @@
 /**
  * CAMPUS UTILITIES HUB - LOST & FOUND MODULE
- * This module facilitates community help by allowing students to report lost or found items.
- * Key features include Cloudinary image hosting, real-time status filtering, 
- * and a draggable peer-to-peer chat system.
+ * Developed to facilitate community help through real-time reporting.
+ * Key features: Cloudinary image hosting, Firestore snapshots, and 
+ * a draggable P2P chat bridge.
  */
 import { auth, db } from './firebase-config.js';
 
@@ -17,7 +17,6 @@ const backBtn = document.getElementById('back-to-items');
 const filterType = document.getElementById('filter-type');
 const searchInput = document.getElementById('search-items');
 
-// Chat Component Selectors
 const inboxToggle = document.getElementById('inbox-toggle');
 const inboxMenu = document.getElementById('inbox-menu');
 const chatDrawer = document.getElementById('chat-drawer');
@@ -30,14 +29,13 @@ const logoutBtn = document.getElementById('logout-button');
 let currentActiveChatId = null;
 let currentChatListener = null;
 
-// Cloudinary Credentials for image hosting
 const CLOUD_NAME = "di1jmmord";
 const UPLOAD_PRESET = "CampusUtilityHub";
 
 /**
  * --- 3. UI VIEW CONTROLS ---
- * Using simple display toggles to switch between the "Discovery Feed" 
- * and the "Report Item" form without page reloads.
+ * Simple display toggles to switch between the "Discovery Feed" 
+ * and "Report" views without page reloads.
  */
 if (toggleReportBtn) {
     toggleReportBtn.onclick = () => {
@@ -57,8 +55,8 @@ if (backBtn) {
 
 /**
  * --- 4. ASYNC ITEM SUBMISSION ---
- * This handles the dual-process of uploading a physical photo to the cloud 
- * and saving the metadata (name, description, status) to Firestore.
+ * Dual-process: Uploads photo to Cloudinary first, then saves 
+ * metadata to Firestore.
  */
 if (reportForm) {
     reportForm.addEventListener('submit', async (e) => {
@@ -75,7 +73,6 @@ if (reportForm) {
 
             let finalImageUrl = "https://via.placeholder.com/300?text=No+Image";
 
-            // If a photo is provided, we send it to Cloudinary first
             if (imageFile) {
                 const formData = new FormData();
                 formData.append('file', imageFile);
@@ -89,7 +86,6 @@ if (reportForm) {
                 finalImageUrl = data.secure_url;
             }
 
-            // Save the finalized record to our 'lost_found_items' collection
             await db.collection("lost_found_items").add({
                 itemName: name,
                 description: desc,
@@ -114,9 +110,35 @@ if (reportForm) {
 
 /**
  * --- 5. PEER-TO-PEER MESSAGING ---
- * I built a real-time chat bridge so the owner and finder can coordinate 
- * a meetup safely. Includes a draggable UI for better multi-tasking on the map.
+ * I built this real-time bridge so students can coordinate meetups safely.
+ * Note: I've made contactReporter global to fix the ReferenceError.
  */
+
+window.contactReporter = async (reporterId, reporterEmail, itemId) => {
+    // Prevent students from messaging themselves
+    if (reporterId === auth.currentUser.uid) return;
+
+    // Standard deterministic ID starting with LF_ for Hub filtering
+    const chatId = `LF_${itemId}_${auth.currentUser.uid}_${reporterId}`;
+    const chatRef = db.collection("chats").doc(chatId);
+    
+    try {
+        const doc = await chatRef.get();
+        if (!doc.exists) {
+            await chatRef.set({
+                itemId: itemId,
+                participants: [auth.currentUser.uid, reporterId],
+                participantEmails: [auth.currentUser.email, reporterEmail],
+                messages: [],
+                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
+        window.openChatSession(chatId);
+    } catch (err) {
+        console.error("Chat initiation failed:", err);
+    }
+};
+
 const sendMessage = async () => {
     const text = chatInput.value.trim();
     if (!text || !currentActiveChatId) return;
@@ -162,7 +184,7 @@ window.openChatSession = (chatId) => {
     }
 };
 
-// UI UX: Dragging logic for the chat drawer
+// Draggable logic for the chat drawer overlay
 const dragElement = (elmnt) => {
     let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
     const header = elmnt.querySelector(".chat-header");
@@ -185,8 +207,6 @@ if (chatDrawer) dragElement(chatDrawer);
 
 /**
  * --- 6. REAL-TIME DISCOVERY FEED ---
- * This dynamically populates cards based on Firestore snapshots. 
- * I included a search and filter system to help users find specific items quickly.
  */
 function initializeFeed() {
     const selectedFilter = filterType.value;
@@ -205,7 +225,6 @@ function initializeFeed() {
             const itemName = (item.itemName || "").toLowerCase();
             const itemDesc = (item.description || "").toLowerCase();
 
-            // Filter Check
             if (selectedFilter !== "all" && item.status !== selectedFilter) return;
             const matchesSearch = itemName.includes(searchTerm) || itemDesc.includes(searchTerm);
             if (searchTerm !== "" && !matchesSearch) return;
@@ -279,14 +298,13 @@ function loadHeaderInbox() {
                     </div>
                     <p>${lastMsg ? lastMsg.text : 'New Chat'}</p>
                 `;
-                div.onclick = () => openChatSession(doc.id);
+                div.onclick = () => window.openChatSession(doc.id);
                 container.appendChild(div);
             });
             if (msgCount) msgCount.textContent = unread > 0 ? `(${unread})` : '';
         });
 }
 
-// Logic to mark items as solved or delete old posts
 window.markAsReturned = async (id) => {
     if (confirm("Has this item been successfully returned?")) {
         await db.collection("lost_found_items").doc(id).update({ status: 'returned' });
