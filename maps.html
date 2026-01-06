@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campus Navigator | Evaluation Demo</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css">
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    
+    <style>
+        .map-wrapper { display: flex; height: calc(100vh - 70px); }
+        #map { flex: 1; z-index: 1; }
+        .sidebar { width: 320px; padding: 20px; background: #f8f9fa; overflow-y: auto; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }
+        
+        .action-btn { width: 100%; padding: 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; color: white; margin-bottom: 20px; }
+        .locate { background: #27ae60; }
+        
+        /* Navigation Card Styles */
+        .card { background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; cursor: pointer; border: 1px solid #ddd; transition: 0.2s; }
+        .card:hover { border-color: #1a73e8; background: #f0f7ff; }
+        
+        /* Routing Info Panel - ID must match JS */
+        #route-panel { background: #e8f5e9; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: none; border-left: 5px solid #2e7d32; }
+        .clear-btn { background: #d32f2f; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; width: 100%; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <header style="padding: 15px; background: #1a1a2e; color: white; display: flex; justify-content: space-between; align-items: center;">
+        <h2>📍 Campus Navigator</h2>
+        <button onclick="window.location.href='dashboard.html'" style="background:none; color:white; border:1px solid white; padding:5px 10px; border-radius:5px; cursor:pointer;">Back</button>
+    </header>
+
+    <div class="map-wrapper">
+        <aside class="sidebar">
+            <button class="action-btn locate" onclick="locateUser()">📍 Find My Location</button>
+            
+            <div id="route-panel">
+                <strong>Navigation Active</strong>
+                <p id="route-details" style="font-size: 14px; margin: 5px 0;">Calculating distance...</p>
+                <button onclick="clearRoute()" class="clear-btn">Cancel Route</button>
+            </div>
+
+            <h3>Quick Destinations</h3>
+            <div class="location-list">
+                
+            </div>
+        </aside>
+
+        <div id="map"></div>
+    </div>
+
+    
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script type="module" src="js/firebase-config.js"></script>
+    <script type="module" src="js/maps.js"></script>
+
+</body>
+</html>

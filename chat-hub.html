@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campus Hub - Chat Hub</title>
+    <link rel="stylesheet" href="style.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Campus Utilities Hub</h1>
+        <button id="logout-button">Logout</button>
+    </header>
+
+    <div class="main-container">
+        <nav class="sidebar">
+            <h2>Navigation</h2>
+            <ul>
+                <li><a href="dashboard.html" class="active">🏠 Dashboard</a></li>
+                <li><a href="mess-menu.html">🍽️ Mess Menu</a></li>
+                <li><a href="lost-found.html">🔍 Lost & Found</a></li>
+                <li><a href="marketplace.html">🛍️ Marketplace</a></li>
+                <li><a href="maps.html">📍 Campus Map</a></li>
+                <li><a href="chat-hub.html" class="active">💬 Chat Hub</a></li>
+                <li><a href="profile.html">👤 My Profile</a></li>
+                
+                <li id="admin-panel-link" style="display:none;">
+                    <a href="admin-panel.html" class="admin-link-highlight">🛠️ Admin Panel</a>
+                </li>
+            </ul>
+        </nav>
+
+        <main class="content chat-hub-layout">
+            <section class="chat-sidebar">
+                <div class="chat-tabs">
+                    <button class="tab-btn active" onclick="switchTab('general')">General</button>
+                    <button class="tab-btn" onclick="switchTab('lost-found')">L&F</button>
+                    <button class="tab-btn" onclick="switchTab('marketplace')">Market</button>
+                </div>
+
+                <div id="user-search-container" class="search-box">
+                    <div class="search-input-wrapper">
+                        <input type="text" id="user-search-input" placeholder="Search user email..." autocomplete="off">
+                        <div id="search-results" class="suggestions-dropdown" style="display: none;"></div>
+                    </div>
+                    <button id="find-user-btn">🔍</button>
+                </div>
+
+                <div id="conversation-list">
+                    </div>
+            </section>
+
+            <section class="chat-main">
+                <div id="chat-header-info">Select a chat</div>
+                <div id="chat-hub-messages" class="chat-body"></div>
+                <div class="chat-footer">
+                    <input type="text" id="chat-hub-input" placeholder="Type a message...">
+                    <button id="send-hub-btn">Send</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script type="module" src="js/firebase-config.js"></script>
+    <script type="module" src="js/chat-hub.js"></script>
+</body>
+</html>

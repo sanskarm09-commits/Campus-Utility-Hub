@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+    <title>Campus Hub - Dashboard</title>
+    
+    <link rel="stylesheet" href="style.css"> 
+    
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <header class="main-header">
+        <div class="logo-area">
+            <h1>Campus Utilities Hub</h1>
+        </div>
+        <div class="user-controls">
+            <button id="logout-button" class="btn-logout">Logout</button>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <nav class="sidebar">
+            <h2>Navigation</h2>
+            <ul>
+                <li><a href="dashboard.html" class="active">🏠 Dashboard</a></li>
+                <li><a href="mess-menu.html">🍽️ Mess Menu</a></li>
+                <li><a href="lost-found.html">🔍 Lost & Found</a></li>
+                <li><a href="marketplace.html">🛍️ Marketplace</a></li>
+                <li><a href="maps.html">📍 Campus Map</a></li>
+                <li><a href="chat-hub.html">💬 Chat Hub</a></li>
+                <li><a href="profile.html">👤 My Profile</a></li>
+                
+                <li id="admin-panel-link" style="display:none;">
+                    <a href="admin-panel.html" class="admin-link-highlight">🛠️ Admin Panel</a>
+                </li>
+            </ul>
+        </nav>
+
+        <main class="content">
+            <div class="welcome-banner">
+                <h2>Welcome, <span id="user-display-name">User</span>!</h2>
+                <p>Monitor real-time campus updates and facility statuses.</p>
+            </div>
+
+            <section id="admin-announcement-section" class="widget admin-widget" style="display: none;">
+                <h3>📢 Post Official Announcement</h3>
+                <form id="announcement-form">
+                    <input type="text" id="announcement-title" placeholder="Title (e.g., Wifi Maintenance)" required>
+                    <textarea id="announcement-text" placeholder="Write details here..." rows="3" required></textarea>
+                    <button type="submit" class="btn-primary">Broadcast Update</button>
+                </form>
+                <p id="announcement-msg"></p>
+            </section>
+
+            <section class="widget">
+                <h3>🔔 Latest Announcements</h3>
+                <div id="announcements-container">
+                    <p class="loading-text">Fetching latest updates...</p>
+                </div>
+            </section>
+
+            <section class="widget">
+                <h3>💡 Campus Utility Status</h3>
+                <div id="utility-grid" class="utility-grid">
+                    <p class="loading-text">Monitoring systems...</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script type="module" src="js/firebase-config.js"></script>
+    <script type="module" src="js/dashboard.js"></script>
+</body>
+</html>

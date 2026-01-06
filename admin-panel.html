@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Campus Utilities Hub</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="admin-panel-layout">
+        <aside class="admin-panel-sidebar">
+            <div class="admin-logo">
+                <h2>Admin Panel</h2>
+                <p id="admin-name-display">Loading...</p>
+            </div>
+            <nav>
+                <button class="admin-nav-btn active" id="btn-users" onclick="switchAdminTab('users')">👥 Students</button>
+                <button class="admin-nav-btn" id="btn-map" onclick="switchAdminTab('map')">📍 Map Manager</button>
+                <button class="admin-nav-btn" id="btn-marketplace" onclick="switchAdminTab('marketplace')">🛍️ Marketplace</button>
+                <button class="admin-nav-btn" id="btn-lostfound" onclick="switchAdminTab('lostfound')">🔍 Lost & Found</button>
+                <button class="admin-nav-btn" id="btn-announcements" onclick="switchAdminTab('announcements')">📢 Broadcast</button>
+                <button class="admin-nav-btn" id="btn-utilities" onclick="switchAdminTab('utilities')">⚡ Utilities</button>
+            </nav>
+            <div class="admin-footer">
+                <button onclick="window.location.href='dashboard.html'" class="back-btn">Exit Portal</button>
+            </div>
+        </aside>
+
+        <main class="admin-panel-main">
+            
+            <section id="section-users" class="admin-panel-section">
+                <div class="section-header">
+                    <h3>Student Management</h3>
+                    <input type="text" id="admin-user-search" placeholder="Search by name or email..." oninput="filterAdminUsers()">
+                </div>
+                <div id="user-list-container" class="admin-data-list"></div>
+            </section>
+
+            <section id="section-map" class="admin-panel-section" style="display:none;">
+                <h3>📍 Add New Campus Landmark</h3>
+                <div class="admin-form" style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 8px;">
+                    <div class="form-group">
+                        <label>Location Name</label>
+                        <input type="text" id="map-loc-name" placeholder="e.g., Diamond Hostel">
+                    </div>
+                    <div class="form-group" style="display: flex; gap: 10px;">
+                        <div style="flex: 1;">
+                            <label>Latitude</label>
+                            <input type="number" id="map-loc-lat" step="any" placeholder="23.8160">
+                        </div>
+                        <div style="flex: 1;">
+                            <label>Longitude</label>
+                            <input type="number" id="map-loc-lng" step="any" placeholder="86.4410">
+                        </div>
+                    </div>
+                    <button onclick="saveMapLocation()" class="admin-submit-btn">Add to Navigator</button>
+                </div>
+                <hr style="margin: 20px 0; border: 0; border-top: 1px solid #444;">
+                <h3>Active Map Locations</h3>
+                <div id="admin-map-list" class="admin-data-list"></div>
+            </section>
+
+            <section id="section-moderation" class="admin-panel-section" style="display:none;">
+                <h3 id="moderation-title">Content Moderation</h3>
+                <div id="moderation-list" class="admin-data-list">
+                    </div>
+            </section>
+
+            <section id="section-announcements" class="admin-panel-section" style="display:none;">
+                <h3>📢 Create Global Announcement</h3>
+                <form id="announcement-form" class="admin-form">
+                    <div class="form-group">
+                        <label>Title</label>
+                        <input type="text" id="ann-title" placeholder="e.g., Holiday Notice" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Message Content</label>
+                        <textarea id="ann-content" rows="4" placeholder="Details here..." required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select id="ann-category">
+                            <option value="General">General</option>
+                            <option value="Urgent">Urgent 🚨</option>
+                            <option value="Mess">Mess Update 🍴</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="admin-submit-btn">Post Announcement</button>
+                </form>
+                <hr style="margin: 20px 0;">
+                <h3>Active Announcements</h3>
+                <div id="active-announcements-list" class="admin-data-list"></div>
+            </section>
+
+            <section id="section-utilities" class="admin-panel-section" style="display:none;">
+                <div class="section-header">
+                    <h3>⚡ Campus Utility Manager</h3>
+                </div>
+                <div id="admin-utility-list" class="admin-utility-grid"></div>
+            </section>
+        </main>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    
+    <script type="module" src="js/firebase-config.js"></script>
+    <script type="module" src="js/admin-panel.js"></script>
+</body>
+</html>
