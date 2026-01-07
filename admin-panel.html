@@ -18,6 +18,7 @@
                 <button class="admin-nav-btn" id="btn-map" onclick="switchAdminTab('map')">📍 Map Manager</button>
                 <button class="admin-nav-btn" id="btn-marketplace" onclick="switchAdminTab('marketplace')">🛍️ Marketplace</button>
                 <button class="admin-nav-btn" id="btn-lostfound" onclick="switchAdminTab('lostfound')">🔍 Lost & Found</button>
+                <button class="admin-nav-btn" id="btn-complaints" onclick="switchAdminTab('complaints')">🚨 Complaints</button>
                 <button class="admin-nav-btn" id="btn-announcements" onclick="switchAdminTab('announcements')">📢 Broadcast</button>
                 <button class="admin-nav-btn" id="btn-utilities" onclick="switchAdminTab('utilities')">⚡ Utilities</button>
             </nav>
@@ -27,7 +28,6 @@
         </aside>
 
         <main class="admin-panel-main">
-            
             <section id="section-users" class="admin-panel-section">
                 <div class="section-header">
                     <h3>Student Management</h3>
@@ -62,7 +62,14 @@
 
             <section id="section-moderation" class="admin-panel-section" style="display:none;">
                 <h3 id="moderation-title">Content Moderation</h3>
-                <div id="moderation-list" class="admin-data-list">
+                <div id="moderation-list" class="admin-data-list"></div>
+            </section>
+
+            <section id="section-complaints" class="admin-panel-section" style="display:none;">
+                <div class="section-header">
+                    <h3>🚨 Student Complaints</h3>
+                </div>
+                <div id="complaint-list" class="admin-data-list">
                     </div>
             </section>
 

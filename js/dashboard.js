@@ -1,8 +1,8 @@
 /**
  * CAMPUS UTILITIES HUB - DASHBOARD CONTROLLER
  * This module acts as the central brain of the student experience.
- * It manages real-time status updates for campus utilities and handles
- * the broadcast system for official announcements.
+ * It manages real-time status updates, handles official announcements,
+ * and processes utility-related complaints.
  */
 
 import { auth, db, firebase } from './firebase-config.js';
@@ -17,9 +17,6 @@ const logoutBtn = document.getElementById('logout-button');
 
 /**
  * --- 1. SESSION & ROLE MANAGEMENT ---
- * On load, we verify the user's identity. 
- * If they are an Admin, the UI dynamically expands to show administrative tools.
- * If they aren't logged in, they are redirected to protect the data.
  */
 auth.onAuthStateChanged(async (user) => {
     if (user) {
@@ -29,31 +26,28 @@ auth.onAuthStateChanged(async (user) => {
             if (userDoc.exists) {
                 const userData = userDoc.data();
                 
-                // Greeting the user by their preferred name
                 if (userDisplayName) {
                     userDisplayName.textContent = userData.name || user.email.split('@')[0];
                 }
 
                 // ROLE-BASED ACCESS CONTROL (RBAC)
-                // Only users with the 'admin' flag see these specific management shortcuts
                 if (userData.role === 'admin') {
                     if (adminLink) adminLink.style.display = 'block';
                     if (adminAnnounceSection) adminAnnounceSection.style.display = 'block';
                 }
             } else {
-                // Fallback if the user profile hasn't fully propagated yet
                 if (userDisplayName) userDisplayName.textContent = user.email.split('@')[0];
             }
 
             // Initialize the real-time data streams
             loadAnnouncements();
             loadUtilityStatus();
+            loadRecentComplaints();
 
         } catch (error) {
             console.error("Dashboard Auth Error:", error);
         }
     } else {
-        // Security check: No session found, send user to login
         if (!window.location.pathname.includes("index.html")) {
             window.location.href = "index.html"; 
         }
@@ -62,9 +56,6 @@ auth.onAuthStateChanged(async (user) => {
 
 /**
  * --- 2. LIVE UTILITY MONITORING ---
- * I built this to provide a "Glanceable" view of campus health.
- * It uses a WebSocket-like listener (onSnapshot) so that if an Admin 
- * marks a utility as 'Down', the student's dashboard updates instantly.
  */
 function loadUtilityStatus() {
     if (!utilityGrid) return;
@@ -72,7 +63,6 @@ function loadUtilityStatus() {
     db.collection("utilityStatus").onSnapshot((snap) => {
         utilityGrid.innerHTML = '';
         
-        // Mapping internal names to visual symbols for better UX
         const icons = {
             "Water": "💧",
             "Electricity": "⚡",
@@ -91,7 +81,6 @@ function loadUtilityStatus() {
             const statusText = data.isOperational ? 'Operational' : 'Maintenance Mode';
             const icon = icons[data.name] || "🛠️";
 
-            // Creating dynamic cards with CSS-driven status indicators
             const card = document.createElement('div');
             card.className = 'utility-card';
             card.innerHTML = `
@@ -108,9 +97,85 @@ function loadUtilityStatus() {
 }
 
 /**
- * --- 3. ADMINISTRATIVE BROADCAST ---
- * Allows authorized users to push announcements directly to the campus feed.
- * Includes built-in error handling for permission validation.
+ * --- 3. UTILITY COMPLAINT HANDLER ---
+ * I built this to allow students to report outages directly to the admin.
+ * Attached to 'window' to ensure visibility within the module scope.
+ */
+window.submitComplaint = async () => {
+    const type = document.getElementById('complaint-utility-type').value;
+    const issue = document.getElementById('complaint-text').value;
+    const statusMsg = document.getElementById('complaint-status-msg');
+
+    if (!issue.trim()) {
+        alert("Please describe the issue.");
+        return;
+    }
+
+    try {
+        statusMsg.textContent = "Processing... ⏳";
+        
+        // Storing complaint in a dedicated collection for Admin review
+        await db.collection("complaints").add({
+            utilityType: type,
+            description: issue,
+            studentEmail: auth.currentUser.email,
+            studentUid: auth.currentUser.uid,
+            status: "Pending", // Default status for new complaints
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        statusMsg.textContent = "✅ Complaint lodged successfully!";
+        statusMsg.style.color = "#2e7d32";
+        document.getElementById('complaint-text').value = ""; // Clear input
+
+        // Auto-clear success message after 3 seconds
+        setTimeout(() => { statusMsg.textContent = ""; }, 3000);
+
+    } catch (error) {
+        console.error("Complaint Error:", error);
+        statusMsg.textContent = "❌ Error submitting complaint.";
+        statusMsg.style.color = "#d32f2f";
+    }
+};
+
+function loadRecentComplaints() {
+    const list = document.getElementById('recent-complaints-list');
+    if (!list) return;
+
+    // Fetching the last 3 complaints to maintain a clean dashboard UI
+    db.collection("complaints")
+      .orderBy("createdAt", "desc")
+      .limit(3)
+      .onSnapshot((snap) => {
+        list.innerHTML = '';
+        if (snap.empty) {
+            list.innerHTML = '<p style="font-size: 0.8rem; opacity: 0.5; text-align: center;">No active reports. Campus is running smoothly! ✨</p>';
+            return;
+        }
+
+        snap.forEach(doc => {
+            const data = doc.data();
+            const isResolved = data.status === 'Resolved';
+            
+            const div = document.createElement('div');
+            // Using class names for cleaner styling
+            div.className = `complaint-feed-item ${isResolved ? 'resolved' : ''}`;
+
+            div.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <strong style="font-size: 0.85rem;">${data.utilityType}</strong>
+                    <span class="complaint-tag ${isResolved ? 'resolved' : ''}">
+                        ${data.status.toUpperCase()}
+                    </span>
+                </div>
+                <p style="margin-top: 5px; font-size: 0.8rem; opacity: 0.8; line-height: 1.4;">${data.description}</p>
+            `;
+            list.appendChild(div);
+        });
+    });
+}
+/**
+ * --- 4. ADMINISTRATIVE BROADCAST ---
  */
 const announceForm = document.getElementById('announcement-form');
 if (announceForm) {
@@ -135,9 +200,9 @@ if (announceForm) {
             }
             announceForm.reset(); 
         } catch (err) {
-            console.error("Firestore Permission Error:", err);
+            console.error("Permission Error:", err);
             if (msg) {
-                msg.textContent = "❌ Denied: You do not have Admin permission.";
+                msg.textContent = "❌ Access Denied: Admin only.";
                 msg.style.color = "#d32f2f";
             }
         }
@@ -145,9 +210,7 @@ if (announceForm) {
 }
 
 /**
- * --- 4. CAMPUS NEWS FEED ---
- * Fetches the 5 most recent announcements.
- * I used a descending order by timestamp so the freshest news stays at the top.
+ * --- 5. CAMPUS NEWS FEED ---
  */
 function loadAnnouncements() {
     if (!announcementsContainer) return;
@@ -159,14 +222,12 @@ function loadAnnouncements() {
         announcementsContainer.innerHTML = ''; 
         
         if (snap.empty) {
-            announcementsContainer.innerHTML = `<div class="empty-state"><p>📭 The feed is quiet today.</p></div>`;
+            announcementsContainer.innerHTML = `<div class="empty-state"><p>📭 No recent updates.</p></div>`;
             return;
         }
         
         snap.forEach(doc => {
             const data = doc.data();
-            
-            // Human-readable date formatting
             const dateStr = data.timestamp ? new Date(data.timestamp.toDate()).toLocaleDateString('en-GB', {
                 day: 'numeric', month: 'short', year: 'numeric'
             }) : 'Updating...';
@@ -185,8 +246,7 @@ function loadAnnouncements() {
 }
 
 /**
- * --- 5. LOGOUT HANDLER ---
- * Safely clears the session and returns the user to the starting point.
+ * --- 6. LOGOUT HANDLER ---
  */
 if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
@@ -194,3 +254,4 @@ if (logoutBtn) {
         window.location.href = "index.html";
     });
 }
+

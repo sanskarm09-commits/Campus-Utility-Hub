@@ -1,25 +1,22 @@
 import { auth, db, firebase } from './firebase-config.js';
 
 /**
- * STATE MANAGEMENT
- * We keep track of the user list and the current tab to handle 
- * filtering and UI updates smoothly.
+ * --- ADMIN PANEL CONTROLLER ---
+ * Centralized state and event management for all administrative tasks.
  */
 let allUsers = [];
 let activeAdminTab = 'users';
 
 /**
  * SECURITY GATEKEEPER
- * This block ensures that only authorized administrators can see the panel.
- * If a regular student tries to access this page, they are booted back 
- * to the dashboard for security.
+ * Verifies admin credentials before allowing access to the panel.
  */
 auth.onAuthStateChanged(async (user) => {
     if (user) {
         const userDoc = await db.collection("users").doc(user.uid).get();
         if (userDoc.exists && userDoc.data().role === 'admin') {
             document.getElementById('admin-name-display').textContent = userDoc.data().name || "Admin";
-            switchAdminTab('users'); // Defaulting to Student Management on login
+            switchAdminTab('users'); 
         } else {
             alert("Access Denied: Admin privileges required.");
             window.location.href = "dashboard.html";
@@ -30,30 +27,33 @@ auth.onAuthStateChanged(async (user) => {
 });
 
 /**
- * DYNAMIC NAVIGATION SYSTEM
- * Instead of multiple pages, I built a single-page interface (SPA).
- * This function toggles section visibility and triggers the specific 
- * data fetcher for whichever category the admin is currently managing.
+ * DYNAMIC NAVIGATION SYSTEM (SPA Logic)
+ * Toggles section visibility and routes data fetching based on the active tab.
  */
 window.switchAdminTab = (tab) => {
     activeAdminTab = tab;
 
-    // Highlight the active button in the sidebar
+    // Sidebar UI Highlighting
     document.querySelectorAll('.admin-nav-btn').forEach(btn => {
         btn.classList.toggle('active', btn.id === `btn-${tab}`);
     });
 
-    // Mapping sidebar buttons to their respective HTML content sections
+    /**
+     * DOM Mapping: 
+     * I unified Marketplace and LostFound to share 'section-moderation' 
+     * to keep the HTML clean and prevent 'null' reference errors.
+     */
     const sections = {
         'users': 'section-users',
         'map': 'section-map', 
         'marketplace': 'section-moderation',
         'lostfound': 'section-moderation',
+        'complaints': 'section-complaints',
         'announcements': 'section-announcements',
         'utilities': 'section-utilities'
     };
 
-    // Hide everything first, then show only what we need
+    // Global Section Reset
     Object.values(sections).forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
@@ -62,67 +62,92 @@ window.switchAdminTab = (tab) => {
     const activeSectionId = sections[tab];
     if (activeSectionId) document.getElementById(activeSectionId).style.display = 'block';
 
-    // Trigger the appropriate database listener for the selected tab
+    // Data Router
     if (tab === 'users') loadUserManagement();
     if (tab === 'map') loadAdminLocations(); 
     if (tab === 'marketplace') loadModeration('marketplace_items', '🛍️ Marketplace Moderation');
     if (tab === 'lostfound') loadModeration('lost_found_items', '🔍 Lost & Found Moderation');
+    if (tab === 'complaints') loadComplaints();
     if (tab === 'announcements') loadAnnouncements();
     if (tab === 'utilities') loadUtilityManager();
 };
 
 /**
+ * COMPLAINT MONITOR
+ * Real-time listener for the utility complaints lodged by students.
+ */
+async function loadComplaints() {
+    const list = document.getElementById('complaint-list');
+    if (!list) return;
+
+    db.collection("complaints").orderBy("createdAt", "desc").onSnapshot(snap => {
+        list.innerHTML = '';
+        if (snap.empty) {
+            list.innerHTML = '<p style="padding:20px; opacity:0.6;">No complaints filed yet.</p>';
+            return;
+        }
+        snap.forEach(doc => {
+            const data = doc.data();
+            const div = document.createElement('div');
+            div.className = `admin-panel-item ${data.status === 'Resolved' ? 'resolved-dim' : ''}`;
+            div.style.borderLeft = data.status === 'Resolved' ? '5px solid #34a853' : '5px solid #ea4335';
+            
+            div.innerHTML = `
+                <div>
+                    <strong>${data.utilityType} Issue</strong> - <small>${data.status}</small><br>
+                    <p style="margin: 5px 0;">"${data.description}"</p>
+                    <small style="opacity:0.7;">Reporter: ${data.studentEmail}</small>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    ${data.status !== 'Resolved' ? `<button onclick="resolveComplaint('${doc.id}')" class="btn-online">Mark Resolved</button>` : ''}
+                    <button onclick="deleteContent('complaints', '${doc.id}')" class="ban-btn">Remove</button>
+                </div>
+            `;
+            list.appendChild(div);
+        });
+    });
+}
+
+window.resolveComplaint = async (id) => {
+    if(confirm("Mark this issue as fixed?")) {
+        await db.collection("complaints").doc(id).update({ status: "Resolved" });
+    }
+};
+
+/**
  * CAMPUS MAP MANAGER
- * Allows admins to add physical coordinates for buildings.
- * These points are pushed to Firestore and sync immediately with the student map.
+ * Direct Firestore injection for building coordinates.
  */
 window.saveMapLocation = async function() {
     const name = document.getElementById('map-loc-name').value;
     const lat = parseFloat(document.getElementById('map-loc-lat').value);
     const lng = parseFloat(document.getElementById('map-loc-lng').value);
 
-    // Validation to ensure we don't send broken data to the map API
     if (!name || isNaN(lat) || isNaN(lng)) {
-        alert("Please enter a valid name and numeric coordinates.");
+        alert("Please enter valid name and coordinates.");
         return;
     }
 
     try {
         await db.collection("campus_locations").add({
-            name: name,
-            lat: lat,
-            lng: lng,
+            name, lat, lng,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
-        alert("Landmark added successfully!");
-        
-        // Resetting form fields for the next entry
-        document.getElementById('map-loc-name').value = '';
-        document.getElementById('map-loc-lat').value = '';
-        document.getElementById('map-loc-lng').value = '';
-    } catch (e) {
-        console.error("Error adding location:", e);
-    }
+        alert("Landmark added!");
+        ['map-loc-name', 'map-loc-lat', 'map-loc-lng'].forEach(id => document.getElementById(id).value = '');
+    } catch (e) { console.error(e); }
 };
 
 function loadAdminLocations() {
     const list = document.getElementById('admin-map-list');
-    // Live listener ensures that if a location is deleted, it disappears instantly from the list
     db.collection("campus_locations").orderBy("timestamp", "desc").onSnapshot(snap => {
         list.innerHTML = '';
-        if (snap.empty) {
-            list.innerHTML = '<p>No landmarks added yet.</p>';
-            return;
-        }
         snap.forEach(doc => {
             const data = doc.data();
             const div = document.createElement('div');
             div.className = 'admin-panel-item';
             div.innerHTML = `
-                <div>
-                    <strong>${data.name}</strong><br>
-                    <small>${data.lat}, ${data.lng}</small>
-                </div>
+                <div><strong>${data.name}</strong><br><small>${data.lat}, ${data.lng}</small></div>
                 <button class="ban-btn" onclick="deleteLocation('${doc.id}')">Remove Landmark</button>
             `;
             list.appendChild(div);
@@ -131,15 +156,11 @@ function loadAdminLocations() {
 }
 
 window.deleteLocation = async (id) => {
-    if (confirm("Permanently delete this landmark from the map?")) {
-        await db.collection("campus_locations").doc(id).delete();
-    }
+    if (confirm("Delete this landmark?")) await db.collection("campus_locations").doc(id).delete();
 };
 
 /**
  * STUDENT DIRECTORY
- * Fetches all registered users. I added a filter function so admins 
- * can quickly find specific students in a large database.
  */
 async function loadUserManagement() {
     const snap = await db.collection("users").get();
@@ -149,15 +170,13 @@ async function loadUserManagement() {
 
 function renderUsers(users) {
     const container = document.getElementById('user-list-container');
+    if (!container) return;
     container.innerHTML = '';
     users.forEach(u => {
         const div = document.createElement('div');
         div.className = 'admin-panel-item';
         div.innerHTML = `
-            <div>
-                <strong>${u.name}</strong><br>
-                <small>${u.email}</small>
-            </div>
+            <div><strong>${u.name}</strong><br><small>${u.email}</small></div>
             <button class="ban-btn" onclick="deleteUserAccount('${u.id}')">Remove Student</button>
         `;
         container.appendChild(div);
@@ -180,15 +199,15 @@ window.deleteUserAccount = async (uid) => {
 };
 
 /**
- * GLOBAL CONTENT MODERATION
- * A unified function to handle both Marketplace and Lost & Found.
- * This keeps the code DRY (Don't Repeat Yourself) by reusing the same logic for different collections.
+ * SHARED MODERATION ENGINE
  */
 async function loadModeration(collection, title) {
-    document.getElementById('moderation-title').textContent = title;
+    const titleEl = document.getElementById('moderation-title');
     const list = document.getElementById('moderation-list');
+    if (titleEl) titleEl.textContent = title;
     
     db.collection(collection).onSnapshot(snap => {
+        if (!list) return;
         list.innerHTML = '';
         if (snap.empty) {
             list.innerHTML = '<p>No items to moderate.</p>';
@@ -208,19 +227,16 @@ async function loadModeration(collection, title) {
 }
 
 window.deleteContent = async (col, id) => {
-    if (confirm("Remove this post permanently?")) {
-        await db.collection(col).doc(id).delete();
-    }
+    if (confirm("Remove this entry permanently?")) await db.collection(col).doc(id).delete();
 };
 
 /**
- * CAMPUS UTILITY TOGGLES
- * This allows the admin to manually flip the status of campus services 
- * (like Wi-Fi or Water) to 'Maintenance' mode if there's an outage.
+ * UTILITY STATUS MANAGER
  */
 async function loadUtilityManager() {
     const container = document.getElementById('admin-utility-list');
     db.collection("utilityStatus").onSnapshot(snap => {
+        if (!container) return;
         container.innerHTML = '';
         snap.forEach(doc => {
             const u = doc.data();
@@ -241,28 +257,20 @@ async function loadUtilityManager() {
 }
 
 window.toggleUtility = async (id, currentStatus) => {
-    await db.collection("utilityStatus").doc(id).update({
-        isOperational: !currentStatus
-    });
+    await db.collection("utilityStatus").doc(id).update({ isOperational: !currentStatus });
 };
 
 /**
- * BROADCAST SYSTEM
- * Sends global notices to the student dashboard. 
- * I've included categories so students can filter between Urgent and General news.
+ * BROADCAST & ANNOUNCEMENTS
  */
 const annForm = document.getElementById('announcement-form');
 if (annForm) {
     annForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const title = document.getElementById('ann-title').value;
-        const content = document.getElementById('ann-content').value;
-        const category = document.getElementById('ann-category').value;
-
         await db.collection("announcements").add({
-            title,
-            text: content,
-            category,
+            title: document.getElementById('ann-title').value,
+            text: document.getElementById('ann-content').value,
+            category: document.getElementById('ann-category').value,
             timestamp: firebase.firestore.FieldValue.serverTimestamp(),
             postedBy: auth.currentUser.email
         });
@@ -273,6 +281,7 @@ if (annForm) {
 async function loadAnnouncements() {
     const list = document.getElementById('active-announcements-list');
     db.collection("announcements").orderBy("timestamp", "desc").onSnapshot(snap => {
+        if (!list) return;
         list.innerHTML = '';
         snap.forEach(doc => {
             const data = doc.data();

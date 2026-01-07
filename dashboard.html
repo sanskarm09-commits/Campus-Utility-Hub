@@ -67,6 +67,32 @@
                 <div id="utility-grid" class="utility-grid">
                     <p class="loading-text">Monitoring systems...</p>
                 </div>
+
+                <div class="recent-complaints" style="margin-top: 20px; border-top: 1px solid rgba(0,0,0,0.1); padding-top: 15px;">
+                    <h4 style="margin-bottom: 12px; opacity: 0.9;">📢 Recent Student Reports</h4>
+                    <div id="recent-complaints-list" class="complaints-feed-container">
+                        <p style="font-size: 0.8em; opacity: 0.5;">Loading recent reports...</p>
+                    </div>
+                </div>
+
+                <div class="complaint-card" style="margin-top: 25px; padding: 20px; background: #f9f9f9; border-radius: 8px; border: 1px solid #ddd;">
+                    <h3 style="color: #333; margin-bottom: 5px;">🚨 Report a Utility Outage</h3>
+                    <p style="font-size: 0.9em; margin-bottom: 15px; color: #666;">Is something not working? Lodge a complaint for the Admin to review.</p>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <select id="complaint-utility-type" class="form-input-white">
+                            <option value="Wifi">Wi-Fi</option>
+                            <option value="Water">Water Supply</option>
+                            <option value="Electricity">Electricity</option>
+                            <option value="Mess">Mess/Food Issue</option>
+                        </select>
+                        
+                        <textarea id="complaint-text" class="form-input-white" placeholder="Give details (e.g. No water in Diamond Hostel, Room 302)" rows="3"></textarea>
+                        
+                        <button onclick="submitComplaint()" class="btn-primary" style="width: fit-content; padding: 10px 25px;">SUBMIT REPORT</button>
+                    </div>
+                    <p id="complaint-status-msg" style="font-size: 14px; margin-top: 10px; font-weight: bold;"></p>
+                </div>
             </section>
         </main>
     </div>
