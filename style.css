@@ -2763,3 +2763,11 @@ body, html {
     border-radius: 4px;
     cursor: pointer;
 }
+
+body, html {
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+    overflow-x: hidden; /* Prevents side-scrolling */
+    overflow-y: auto;   /* ✅ Ensures vertical scrolling is allowed */
+}
