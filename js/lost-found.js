@@ -352,4 +352,4 @@ if (chatInput) {
             sendMessage();      // Calls your existing send function
         }
     });
-}
+} 
