@@ -22,17 +22,14 @@
         <nav class="sidebar">
             <h2>Navigation</h2>
             <ul>
-                <li><a href="dashboard.html" class="active">🏠 Dashboard</a></li>
+                <li><a href="dashboard.html">🏠 Dashboard</a></li>
                 <li><a href="mess-menu.html">🍽️ Mess Menu</a></li>
-                <li><a href="lost-found.html">🔍 Lost & Found</a></li>
+                <li><a href="lost-found.html" class="active">🔍 Lost & Found</a></li>
                 <li><a href="marketplace.html">🛍️ Marketplace</a></li>
                 <li><a href="maps.html">📍 Campus Map</a></li>
                 <li><a href="chat-hub.html">💬 Chat Hub</a></li>
                 <li><a href="profile.html">👤 My Profile</a></li>
-                
-                <li id="admin-panel-link" style="display:none;">
-                    <a href="admin-panel.html" class="admin-link-highlight">🛠️ Admin Panel</a>
-                </li>
+                <li id="admin-panel-link" style="display:none;"><a href="admin-panel.html">🛠️ Admin Panel</a></li>
             </ul>
         </nav>
 
@@ -64,7 +61,6 @@
                         <h3>📋 Recent Reports</h3>
                         <div class="market-controls">
                             <input type="text" id="search-items" class="form-select" placeholder="🔍 Search items...">
-                            
                             <select id="filter-type" class="form-select">
                                 <option value="all">All Reports</option>
                                 <option value="lost">Lost Items Only</option>
@@ -95,17 +91,14 @@
                                     <input type="text" id="item-name" placeholder="e.g., Blue Leather Wallet" required>
                                 </div>
                             </div>
-
                             <div class="form-group">
                                 <label for="item-desc">Description & Location:</label>
-                                <textarea id="item-desc" placeholder="Describe the item and where it was last seen..." rows="4" required></textarea>
+                                <textarea id="item-desc" rows="4" required></textarea>
                             </div>
-
                             <div class="form-group">
                                 <label for="item-photo">Upload Photo (Optional):</label>
                                 <input type="file" id="item-photo" accept="image/*">
                             </div>
-
                             <div class="form-actions">
                                 <button type="submit" class="btn-primary" id="submit-report-btn">Post Report</button>
                             </div>
@@ -116,9 +109,10 @@
             </div>
         </main>
     </div>
+
     <div id="chat-drawer" class="chat-drawer">
         <div class="chat-header">
-            <h4 id="chat-with-user">Chat Session</h4>
+            <span>💬 Chat Session</span>
             <button onclick="closeChat()" class="close-btn">×</button>
         </div>
         <div id="chat-messages" class="chat-body"></div>

@@ -1,5 +1,6 @@
 /**
  * CAMPUS UTILITIES HUB - LOST & FOUND MODULE
+ * Fixes: Auto-close dropdown, Green Header, ReferenceError, and Dynamic Usernames.
  */
 import { auth, db, firebase } from './firebase-config.js';
 
@@ -49,7 +50,7 @@ if (backBtn) {
 }
 
 /**
- * --- 4. ASYNC ITEM SUBMISSION ---
+ * --- 4. ASYNC ITEM SUBMISSION (Cloudinary + Firestore) ---
  */
 if (reportForm) {
     reportForm.addEventListener('submit', async (e) => {
@@ -102,10 +103,10 @@ if (reportForm) {
 }
 
 /**
- * --- 5. PEER-TO-PEER MESSAGING ---
+ * --- 5. PEER-TO-PEER MESSAGING LOGIC ---
  */
 
-// Define the listener FIRST to avoid ReferenceErrors
+// Listener defined first to fix ReferenceError
 function startChatListener(chatId) {
     if (currentChatListener) currentChatListener(); 
     currentChatListener = db.collection("chats").doc(chatId).onSnapshot((doc) => {
@@ -121,6 +122,34 @@ function startChatListener(chatId) {
         chatMessages.scrollTop = chatMessages.scrollHeight;
     });
 }
+
+window.openChatSession = (chatId, otherUserEmail = "User") => {
+    currentActiveChatId = chatId;
+
+    // AUTO-CLOSE DROPDOWN: Hides the inbox menu
+    if (inboxMenu) {
+        inboxMenu.classList.remove('show');
+    }
+
+    if (chatDrawer) {
+        chatDrawer.classList.add('open');
+        chatDrawer.style.display = 'flex';
+
+        // GREEN HEADER & DYNAMIC NAME
+        const chatHeader = chatDrawer.querySelector('.chat-header');
+        if (chatHeader) {
+            const displayName = otherUserEmail.split('@')[0];
+            const titleSpan = chatHeader.querySelector('span');
+            if (titleSpan) {
+                titleSpan.textContent = `💬 Chat with ${displayName}`;
+            }
+            chatHeader.style.backgroundColor = '#28a745'; // Green theme
+            chatHeader.style.color = 'white';
+        }
+
+        startChatListener(chatId);
+    }
+};
 
 window.contactReporter = async (reporterId, reporterEmail, itemId) => {
     if (reporterId === auth.currentUser.uid) return;
@@ -139,32 +168,9 @@ window.contactReporter = async (reporterId, reporterEmail, itemId) => {
                 lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
             });
         }
-        window.openChatSession(chatId);
+        window.openChatSession(chatId, reporterEmail); // Passes email to header
     } catch (err) {
         console.error("Chat initiation failed:", err);
-    }
-};
-
-window.openChatSession = (chatId) => {
-    currentActiveChatId = chatId;
-
-    // 1. AUTO-CLOSE DROPDOWN
-    if (inboxMenu) {
-        inboxMenu.classList.remove('show');
-    }
-
-    if (chatDrawer) {
-        chatDrawer.classList.add('open');
-        chatDrawer.style.display = 'flex';
-
-        // 2. GREEN HEADER
-        const chatHeader = chatDrawer.querySelector('.chat-header');
-        if (chatHeader) {
-            chatHeader.style.backgroundColor = '#28a745';
-            chatHeader.style.color = 'white';
-        }
-
-        startChatListener(chatId);
     }
 };
 
@@ -188,33 +194,12 @@ const sendMessage = async () => {
     }
 };
 
-// Global Click Listener: Closes dropdown when clicking elsewhere
+// Global click to close dropdown when clicking outside
 document.addEventListener('click', (e) => {
     if (inboxMenu && !inboxMenu.contains(e.target) && !inboxToggle.contains(e.target)) {
         inboxMenu.classList.remove('show');
     }
 });
-
-// Draggable logic
-const dragElement = (elmnt) => {
-    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-    const header = elmnt.querySelector(".chat-header");
-    if (header) {
-        header.onmousedown = (e) => {
-            e.preventDefault();
-            pos3 = e.clientX; pos4 = e.clientY;
-            document.onmouseup = () => { document.onmouseup = null; document.onmousemove = null; };
-            document.onmousemove = (e) => {
-                pos1 = pos3 - e.clientX; pos2 = pos4 - e.clientY;
-                pos3 = e.clientX; pos4 = e.clientY;
-                elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
-                elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
-                elmnt.style.bottom = "auto"; elmnt.style.right = "auto";
-            };
-        };
-    }
-}
-if (chatDrawer) dragElement(chatDrawer);
 
 /**
  * --- 6. REAL-TIME DISCOVERY FEED ---
@@ -225,7 +210,6 @@ function initializeFeed() {
 
     db.collection("lost_found_items").orderBy("createdAt", "desc").onSnapshot((snapshot) => {
         itemsContainer.innerHTML = ''; 
-        
         if (snapshot.empty) {
             itemsContainer.innerHTML = '<p style="padding: 20px;">No reports found.</p>';
             return;
@@ -242,10 +226,8 @@ function initializeFeed() {
 
             const card = document.createElement('div');
             card.className = 'item-card';
-            
             const statusClass = item.status === 'lost' ? 'status-lost' : 
                                 item.status === 'found' ? 'status-found' : 'status-returned';
-            
             const isOwner = item.reporterId === auth.currentUser?.uid;
 
             card.innerHTML = `
@@ -289,32 +271,46 @@ function loadHeaderInbox() {
 
             snap.forEach((doc) => {
                 const chat = doc.data();
-                const isLF = doc.id.startsWith("LF_");
-                const typeLabel = isLF ? '<span class="label-lf">🔍 L&F</span>' : '<span class="label-market">🛍️ Market</span>';
-                
                 const emails = chat.participantEmails || [];
                 const otherEmail = emails.find(e => e !== auth.currentUser.email) || "User";
                 const lastMsg = (chat.messages || []).slice(-1)[0];
-                const isNew = lastMsg && lastMsg.senderId !== auth.currentUser.uid;
-                if (isNew) unread++;
+                if (lastMsg && lastMsg.senderId !== auth.currentUser.uid) unread++;
 
                 const div = document.createElement('div');
                 div.className = 'chat-summary-card';
-                const displayName = otherEmail.includes('@') ? otherEmail.split('@')[0] : otherEmail;
-
                 div.innerHTML = `
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <strong>${displayName}</strong>
-                        ${typeLabel}
+                        <strong>${otherEmail.split('@')[0]}</strong>
                     </div>
                     <p>${lastMsg ? lastMsg.text : 'New Chat'}</p>
                 `;
-                div.onclick = () => window.openChatSession(doc.id);
+                div.onclick = () => window.openChatSession(doc.id, otherEmail);
                 container.appendChild(div);
             });
             if (msgCount) msgCount.textContent = unread > 0 ? `(${unread})` : '';
         });
 }
+
+// Draggable logic for chat
+const dragElement = (elmnt) => {
+    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+    const header = elmnt.querySelector(".chat-header");
+    if (header) {
+        header.onmousedown = (e) => {
+            e.preventDefault();
+            pos3 = e.clientX; pos4 = e.clientY;
+            document.onmouseup = () => { document.onmouseup = null; document.onmousemove = null; };
+            document.onmousemove = (e) => {
+                pos1 = pos3 - e.clientX; pos2 = pos4 - e.clientY;
+                pos3 = e.clientX; pos4 = e.clientY;
+                elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+                elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+                elmnt.style.bottom = "auto"; elmnt.style.right = "auto";
+            };
+        };
+    }
+}
+if (chatDrawer) dragElement(chatDrawer);
 
 window.markAsReturned = async (id) => {
     if (confirm("Has this item been successfully returned?")) {
@@ -328,7 +324,6 @@ window.removeReport = async (id) => {
 
 window.closeChat = () => { if (chatDrawer) chatDrawer.style.display = 'none'; };
 
-// Initializing listeners
 if (filterType) filterType.addEventListener('change', initializeFeed);
 if (searchInput) searchInput.addEventListener('input', initializeFeed);
 if (inboxToggle) {
