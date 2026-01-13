@@ -1,8 +1,5 @@
 /**
  * CAMPUS UTILITIES HUB - FIREBASE INITIALIZATION
- * * This is the central configuration file. I set it up to initialize the 
- * Firebase app and export the specific services (Auth and Firestore) 
- * so they can be reused across all other modules.
  */
 
 const firebaseConfig = {
@@ -16,15 +13,23 @@ const firebaseConfig = {
 };
 
 // INITIALIZING THE SDK
-// Since we are using the Compatibility (v9 Compat) scripts in our HTML,
-// we initialize the app through the global firebase object.
 const app = firebase.initializeApp(firebaseConfig);
 
+// --- MOBILE NETWORK & STABILITY FIX ---
+const dbInstance = app.firestore();
+
+/**
+ * We force Long Polling to bypass mobile carrier blocks on the QUIC protocol.
+ * The 'merge: true' setting resolves the host-override warning in your console.
+ */
+dbInstance.settings({ 
+    experimentalForceLongPolling: true,
+    merge: true 
+});
+
 // EXPORTING CORE SERVICES
-// I'm capturing the global firebase object here to handle advanced Firestore 
-// commands like FieldValue.serverTimestamp() in other files.
 const firebaseLib = window.firebase; 
 
 export const auth = app.auth();         
-export const db = app.firestore();  
+export const db = dbInstance;  
 export { firebaseLib as firebase };
