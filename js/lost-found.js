@@ -342,3 +342,14 @@ if (logoutBtn) {
 }
 
 if (sendMsgBtn) sendMsgBtn.onclick = sendMessage;
+
+// --- ALLOW ENTER KEY TO SEND ---
+if (chatInput) {
+    chatInput.addEventListener('keydown', (e) => {
+        // Check if the key pressed is Enter (key code 13)
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault(); // Prevents a new line from being added
+            sendMessage();      // Calls your existing send function
+        }
+    });
+}
