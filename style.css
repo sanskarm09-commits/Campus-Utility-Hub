@@ -2736,3 +2736,30 @@ body, html {
     70% { box-shadow: 0 0 0 15px rgba(26, 115, 232, 0); }
     100% { box-shadow: 0 0 0 0 rgba(26, 115, 232, 0); }
 }
+
+/* Chat Window Container */
+.chat-window {
+    border-radius: 12px;
+    overflow: hidden; /* Ensures header corners don't overlap border-radius */
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+
+/* Updated Green Header */
+.chat-header {
+    background-color: #28a745; /* Matches your green 'Report' button */
+    color: white;
+    padding: 12px 16px;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Close/Minimize button inside the green header */
+.chat-header button {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+}

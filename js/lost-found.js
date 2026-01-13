@@ -1,10 +1,7 @@
 /**
  * CAMPUS UTILITIES HUB - LOST & FOUND MODULE
- * Developed to facilitate community help through real-time reporting.
- * Key features: Cloudinary image hosting, Firestore snapshots, and 
- * a draggable P2P chat bridge.
  */
-import { auth, db } from './firebase-config.js';
+import { auth, db, firebase } from './firebase-config.js';
 
 // --- 1. DOM SELECTORS ---
 const reportForm = document.getElementById('report-item-form');
@@ -34,8 +31,6 @@ const UPLOAD_PRESET = "CampusUtilityHub";
 
 /**
  * --- 3. UI VIEW CONTROLS ---
- * Simple display toggles to switch between the "Discovery Feed" 
- * and "Report" views without page reloads.
  */
 if (toggleReportBtn) {
     toggleReportBtn.onclick = () => {
@@ -55,8 +50,6 @@ if (backBtn) {
 
 /**
  * --- 4. ASYNC ITEM SUBMISSION ---
- * Dual-process: Uploads photo to Cloudinary first, then saves 
- * metadata to Firestore.
  */
 if (reportForm) {
     reportForm.addEventListener('submit', async (e) => {
@@ -110,15 +103,28 @@ if (reportForm) {
 
 /**
  * --- 5. PEER-TO-PEER MESSAGING ---
- * I built this real-time bridge so students can coordinate meetups safely.
- * Note: I've made contactReporter global to fix the ReferenceError.
  */
 
+// Define the listener FIRST to avoid ReferenceErrors
+function startChatListener(chatId) {
+    if (currentChatListener) currentChatListener(); 
+    currentChatListener = db.collection("chats").doc(chatId).onSnapshot((doc) => {
+        if (!doc.exists) return;
+        chatMessages.innerHTML = '';
+        const data = doc.data();
+        (data.messages || []).forEach(msg => {
+            const div = document.createElement('div');
+            div.className = `msg ${msg.senderId === auth.currentUser.uid ? 'sent' : 'received'}`;
+            div.textContent = msg.text;
+            chatMessages.appendChild(div);
+        });
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    });
+}
+
 window.contactReporter = async (reporterId, reporterEmail, itemId) => {
-    // Prevent students from messaging themselves
     if (reporterId === auth.currentUser.uid) return;
 
-    // Standard deterministic ID starting with LF_ for Hub filtering
     const chatId = `LF_${itemId}_${auth.currentUser.uid}_${reporterId}`;
     const chatRef = db.collection("chats").doc(chatId);
     
@@ -136,6 +142,29 @@ window.contactReporter = async (reporterId, reporterEmail, itemId) => {
         window.openChatSession(chatId);
     } catch (err) {
         console.error("Chat initiation failed:", err);
+    }
+};
+
+window.openChatSession = (chatId) => {
+    currentActiveChatId = chatId;
+
+    // 1. AUTO-CLOSE DROPDOWN
+    if (inboxMenu) {
+        inboxMenu.classList.remove('show');
+    }
+
+    if (chatDrawer) {
+        chatDrawer.classList.add('open');
+        chatDrawer.style.display = 'flex';
+
+        // 2. GREEN HEADER
+        const chatHeader = chatDrawer.querySelector('.chat-header');
+        if (chatHeader) {
+            chatHeader.style.backgroundColor = '#28a745';
+            chatHeader.style.color = 'white';
+        }
+
+        startChatListener(chatId);
     }
 };
 
@@ -159,32 +188,14 @@ const sendMessage = async () => {
     }
 };
 
-function startChatListener(chatId) {
-    if (currentChatListener) currentChatListener(); 
-    currentChatListener = db.collection("chats").doc(chatId).onSnapshot((doc) => {
-        if (!doc.exists) return;
-        chatMessages.innerHTML = '';
-        const data = doc.data();
-        (data.messages || []).forEach(msg => {
-            const div = document.createElement('div');
-            div.className = `msg ${msg.senderId === auth.currentUser.uid ? 'sent' : 'received'}`;
-            div.textContent = msg.text;
-            chatMessages.appendChild(div);
-        });
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    });
-}
-
-window.openChatSession = (chatId) => {
-    currentActiveChatId = chatId;
-    if (chatDrawer) {
-        chatDrawer.classList.add('open');
-        chatDrawer.style.display = 'flex';
-        startChatListener(chatId);
+// Global Click Listener: Closes dropdown when clicking elsewhere
+document.addEventListener('click', (e) => {
+    if (inboxMenu && !inboxMenu.contains(e.target) && !inboxToggle.contains(e.target)) {
+        inboxMenu.classList.remove('show');
     }
-};
+});
 
-// Draggable logic for the chat drawer overlay
+// Draggable logic
 const dragElement = (elmnt) => {
     let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
     const header = elmnt.querySelector(".chat-header");
@@ -317,7 +328,7 @@ window.removeReport = async (id) => {
 
 window.closeChat = () => { if (chatDrawer) chatDrawer.style.display = 'none'; };
 
-// Initializing listeners and session-based loaders
+// Initializing listeners
 if (filterType) filterType.addEventListener('change', initializeFeed);
 if (searchInput) searchInput.addEventListener('input', initializeFeed);
 if (inboxToggle) {
